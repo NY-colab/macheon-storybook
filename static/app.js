@@ -37,8 +37,8 @@ function busy(group) {
 function pagesReady(group) {
   return group.draft.pages.every(text => text.trim());
 }
-async function api(path, payload) {
-  return onlineShelf.request(path, payload);
+async function api(path, payload, onProgress) {
+  return onlineShelf.request(path, payload, onProgress);
 }
 function notifyConnection(text) {
   if (el("connection").textContent !== text) el("connection").textContent = text;
@@ -46,7 +46,7 @@ function notifyConnection(text) {
 }
 function summaryFor(group) {
   const {data,draft} = group;
-  if (busy(group)) return data.job?.type === "art" ? "삽화 만드는 중" : "동화 만드는 중";
+  if (busy(group)) return (group.pending === "art" || data.job?.type === "art") ? "삽화 만드는 중" : "동화 만드는 중";
   if (group.error || data.job?.status === "error") return "확인할 내용이 있어요";
   if (draft.pages.some(Boolean)) return draft.title || "동화 원고";
   return draft.words.length || draft.idea ? "이야기 재료 작성 중" : "이야기 시작하기";
@@ -149,6 +149,9 @@ function updateEditorState() {
   if (job?.message && (job.status === "running" || job.status === "error")) {
     msg = job.message;
     if (job.status === "error") msg += job.type === "story" ? " 이야기 재료에서 ‘AI로 동화 쓰기’를 다시 누를 수 있어요." : " 원고에서 ‘삽화 만들기’를 다시 누르거나 글부터 읽어 보세요.";
+  } else if (group.pending === "art") {
+    const ready = group.data.pages.filter(p=>p.image).length;
+    msg = "삽화 " + ready + " / 4장 완성 · 책을 펼치면 완성된 그림부터 볼 수 있어요.";
   } else if (locked) msg = "AI가 작업 중이에요. 이 탭을 열어 두세요.";
   if (el("jobs").textContent !== msg) el("jobs").textContent = msg;
   show(el("jobs"),Boolean(msg));
@@ -303,17 +306,22 @@ async function startJob(type) {
     }
   }
   if (!await flush(group) || busy(group)) return;
-  group.pending = true;
+  group.pending = type;
+  group.error = "";
   updateEditorState();
   const payload = type === "story" ? {words:[...group.draft.words], idea:group.draft.idea} : {title:group.draft.title, pages:group.draft.pages};
   try {
-    const result = await api("/api/groups/" + group.data.id + "/" + type,{...payload,revision:group.data.revision});
+    const result = await api("/api/groups/" + group.data.id + "/" + type,{...payload,revision:group.data.revision}, saved => {
+      group.data = saved;
+      if (active === saved.id) updateEditorState();
+      if (reader?.source === saved.id) paintReader();
+    });
     group.pending = false;
     merge(result);
     if (type === "story" && !result.job && result.pages.length) group.panel = "story";
     if (group.data.id === active) fillEditor();
   } catch (error) {
-    group.error = "요청을 보내지 못했어요. " + error.message;
+    group.error = (type === "art" ? "삽화 생성을 마치지 못했어요. 다시 누르면 남은 쪽부터 만듭니다. " : "동화를 쓰지 못했어요. ") + error.message;
   } finally {
     group.pending = false;
     updateEditorState();

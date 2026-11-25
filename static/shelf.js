@@ -49,7 +49,7 @@ const onlineShelf = (() => {
   }
   async function writeBook(id,payload) {
     const prompt = "어르신 모둠이 고른 다섯 단어를 모두 담아 자유로운 한국어 그림동화를 창작해 주세요. 모둠이 준 아이디어와 대사를 살리고, 기·승·전·결 네 장면으로 구성하세요. 한 쪽에 짧고 낭독하기 쉬운 두 문장씩 쓰세요. JSON 객체 하나만 반환하세요. title은 80자 이하 제목, pages는 한국어 문자열 네 개의 배열입니다. 이야기 재료 " + JSON.stringify({words:payload.words,idea:payload.idea});
-    const reply = await puter.ai.chat(prompt);
+    const reply = await puter.ai.chat(prompt,{model:"gemini-3.1-flash-lite",reasoning_effort:"minimal",max_tokens:1200});
     const content = reply.message?.content;
     const raw = Array.isArray(content) ? content.map(p=>p.text || "").join("") : String(content || reply);
     let book;
@@ -59,28 +59,45 @@ const onlineShelf = (() => {
       throw new Error("네 쪽 원고를 받지 못했어요. 다시 시도해 주세요.");
     return save(id,payload.revision,g=>{g.title=book.title.trim(); g.pages=pages(book.pages,g.pages);});
   }
-  async function illustrate(id,payload) {
+  async function drawPage(texts,i) {
+    const prompt = "Paint one full-bleed 4:3 landscape watercolor illustration for a Korean storybook. Consistent characters and clothes across the four scenes. No text, borders or lettering. Keep essential details near center. Story: " + JSON.stringify(texts) + ". Illustrate only scene " + (i+1) + ": " + texts[i];
+    let img = await puter.ai.txt2img(prompt,{ratio:{w:4,h:3}});
+    if (/^https?:/.test(img.src) && new URL(img.src).origin !== location.origin) {
+      const source = img.src;
+      img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = source;
+    }
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width=1440; canvas.height=1080;
+    const scale=Math.max(canvas.width/img.naturalWidth,canvas.height/img.naturalHeight);
+    const width=img.naturalWidth*scale, height=img.naturalHeight*scale;
+    canvas.getContext("2d").drawImage(img,(1440-width)/2,(1080-height)/2,width,height);
+    return canvas.toDataURL("image/jpeg",0.87);
+  }
+  async function illustrate(id,payload,onProgress) {
     let group = (await getGroups()).find(g=>g.id===id);
     if (group.revision !== payload.revision) throw new Error("원고가 바뀌었어요. 다시 열어 주세요.");
-    for (let i=0;i<group.pages.length;i++) {
-      if (group.pages[i].image) continue;
-      const prompt = "Paint one full-bleed 4:3 landscape watercolor illustration for a Korean storybook. Consistent characters and clothes across the four scenes. No text, borders or lettering. Keep essential details near center. Story: " + JSON.stringify(payload.pages) + ". Illustrate only scene " + (i+1) + ": " + group.pages[i].text;
-      let img = await puter.ai.txt2img(prompt,{ratio:{w:4,h:3}});
-      if (/^https?:/.test(img.src) && new URL(img.src).origin !== location.origin) {
-        const source = img.src;
-        img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = source;
+    const missing = group.pages.map((p,i)=>p.image ? null : i).filter(i=>i!==null);
+    let writes = Promise.resolve();
+    let failure;
+    async function worker() {
+      while (missing.length && !failure) {
+        const i = missing.shift();
+        try {
+          const url = await drawPage(payload.pages,i);
+          // Commit in completion order so both workers use the latest saved revision.
+          writes = writes.then(async () => {
+            group = await save(id,group.revision,g=>{g.pages[i].image=url;});
+            onProgress?.(group);
+          });
+          await writes;
+        } catch (error) { failure = error || new Error("삽화를 완성하지 못했어요."); }
       }
-      await img.decode();
-      const canvas = document.createElement("canvas");
-      canvas.width=1440; canvas.height=1080;
-      const scale=Math.max(canvas.width/img.naturalWidth,canvas.height/img.naturalHeight);
-      const width=img.naturalWidth*scale, height=img.naturalHeight*scale;
-      canvas.getContext("2d").drawImage(img,(1440-width)/2,(1080-height)/2,width,height);
-      const url=canvas.toDataURL("image/jpeg",0.87);
-      group = await save(id,group.revision,g=>{g.pages[i].image=url;});
     }
+    await Promise.all([worker(),worker()]);
+    if (failure) throw failure;
     return group;
   }
   const button = document.getElementById("connect-ai"), info = document.getElementById("ai-info");
@@ -110,7 +127,7 @@ const onlineShelf = (() => {
     } catch (e) { info.textContent=e.message || "AI 연결을 다시 시도해 주세요."; }
     finally { button.disabled=false; }
   });
-  async function request(path,payload) {
+  async function request(path,payload,onProgress) {
     if (path==="/api/state") {
       if (!catalog) {
         const response=await fetch("./static/catalog.json");
@@ -126,7 +143,7 @@ const onlineShelf = (() => {
     });
     if (!connected) throw new Error("AI를 먼저 연결해 주세요.");
     try {
-      return action==="story" ? await writeBook(id,payload) : await illustrate(id,payload);
+      return action==="story" ? await writeBook(id,payload) : await illustrate(id,payload,onProgress);
     } catch (e) {
       throw new Error(e?.message || e?.error?.message || "AI 계정의 이용 한도와 인터넷 연결을 확인해 주세요.");
     }
