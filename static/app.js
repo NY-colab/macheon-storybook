@@ -168,6 +168,7 @@ function updateEditorState() {
   document.querySelectorAll("#editor input, #editor textarea").forEach(n => n.disabled = locked);
   el("paste-btn").disabled = locked;
   el("write-btn").disabled = locked || !aiAvailable || group.conflict || group.draft.words.length !== 5;
+  el("delete-book").disabled = locked || group.conflict || !(group.draft.title || group.draft.pages.some(Boolean));
   el("art-btn").disabled = locked || !aiAvailable || group.conflict || illustrated;
   el("read-btn").disabled = !hasStory;
   for (let i=0; i<4; i++) {
@@ -329,6 +330,30 @@ async function startJob(type) {
     updateEditorState();
     renderDesks();
     void refresh();
+  }
+}
+async function deleteBook() {
+  const group = groups.get(active);
+  if (!group || busy(group) || group.conflict) return;
+  const id = group.data.id;
+  const title = group.draft.title.trim() || "제목 없는 동화";
+  if (!window.confirm(id + "모둠의 《" + title + "》를 지울까요? 원고와 그림은 복구할 수 없어요. 고른 단어와 이야기 재료는 다시 쓸 수 있어요.")) return;
+  if (!await flush(group) || busy(group)) return;
+  group.pending = true;
+  updateEditorState();
+  try {
+    const result = await api("/api/groups/" + id + "/draft", {
+      revision:group.data.revision, words:group.draft.words, idea:group.draft.idea,
+      title:"", pages:[], deleteBook:true
+    });
+    groups.set(id,createGroup(result));
+    if (active === id) fillEditor();
+  } catch (error) {
+    group.error = "동화를 지우지 못했어요. " + error.message;
+  } finally {
+    group.pending = false;
+    updateEditorState();
+    renderDesks();
   }
 }
 function splitBook(text) {
@@ -533,6 +558,7 @@ el("to-story").addEventListener("click",()=>{
   el("paste-box").open = true;
   el("paste-input").focus();
 });
+el("delete-book").addEventListener("click",()=>void deleteBook());
 el("write-btn").addEventListener("click",()=>void startJob("story"));
 el("art-btn").addEventListener("click",()=>void startJob("art"));
 el("paste-btn").addEventListener("click",applyPaste);

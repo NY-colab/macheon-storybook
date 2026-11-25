@@ -154,6 +154,7 @@ const onlineShelf = (() => {
     const [,idText,action]=path.match(/^\/api\/groups\/([1-3])\/(draft|story|art)$/);
     const id=Number(idText);
     if (action==="draft") return save(id,payload.revision,g=>{
+      if (payload.deleteBook && !payload.pages.length && !payload.title) { delete g.characterSheet; g.job=null; }
       g.words=payload.words; g.idea=payload.idea; g.title=payload.title; g.pages=pages(payload.pages,g.pages);
     });
     if (!connected) throw new Error("AI를 먼저 연결해 주세요.");
