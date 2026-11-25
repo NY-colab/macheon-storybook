@@ -48,7 +48,7 @@ const onlineShelf = (() => {
     });
   }
   async function writeBook(id,payload) {
-    const prompt = "어르신 모둠이 고른 다섯 단어를 모두 담아 자유로운 한국어 그림동화를 창작해 주세요. 모둠이 준 아이디어와 대사를 살리고, 기·승·전·결 네 장면으로 구성하세요. 한 쪽에 짧고 낭독하기 쉬운 두 문장씩 쓰세요. JSON 객체 하나만 반환하세요. title은 80자 이하 제목, pages는 한국어 문자열 네 개의 배열입니다. 이야기 재료 " + JSON.stringify({words:payload.words,idea:payload.idea});
+    const prompt = "고른 단어가 있으면 모두 담고, 이야기 재료가 비어 있으면 일상의 소재를 자유롭게 상상해 자유로운 한국어 그림동화를 창작해 주세요. 모둠이 준 아이디어와 대사를 살리고, 기·승·전·결 네 장면으로 구성하세요. 한 쪽에 짧고 낭독하기 쉬운 두 문장씩 쓰세요. JSON 객체 하나만 반환하세요. title은 80자 이하 제목, pages는 한국어 문자열 네 개의 배열입니다. 이야기 재료 " + JSON.stringify({words:payload.words,idea:payload.idea});
     const reply = await puter.ai.chat(prompt,{model:"gemini-3.1-flash-lite",reasoning_effort:"minimal",max_tokens:1200});
     const content = reply.message?.content;
     const raw = Array.isArray(content) ? content.map(p=>p.text || "").join("") : String(content || reply);

@@ -86,7 +86,7 @@ function toggleWord(word) {
 }
 function updateWordBoard(group, locked) {
   const selected = group.draft.words;
-  const countText = selected.length + " / 5개 선택";
+  const countText = selected.length + "개 선택";
   const wordsText = selected.join(" · ");
   if (el("word-count").textContent !== countText) el("word-count").textContent = countText;
   if (el("selected-words").textContent !== wordsText) el("selected-words").textContent = wordsText;
@@ -167,7 +167,7 @@ function updateEditorState() {
   el("retry-save").textContent = group.conflict ? "내 입력으로 저장" : "다시 저장";
   document.querySelectorAll("#editor input, #editor textarea").forEach(n => n.disabled = locked);
   el("paste-btn").disabled = locked;
-  el("write-btn").disabled = locked || !aiAvailable || group.conflict || group.draft.words.length !== 5;
+  el("write-btn").disabled = locked || !aiAvailable || group.conflict;
   el("delete-book").disabled = locked || group.conflict || !(group.draft.title || group.draft.pages.some(Boolean));
   el("art-btn").disabled = locked || !aiAvailable || group.conflict || illustrated;
   el("read-btn").disabled = !hasStory;
@@ -299,7 +299,6 @@ async function startJob(type) {
   const group = groups.get(active);
   if (!group || busy(group)) return;
   if (type === "story") {
-    if (group.draft.words.length !== 5) return;
     if (group.draft.pages.some(Boolean) && !window.confirm("현재 원고를 새 AI 동화로 바꿀까요?")) return;
   } else {
     if (firstMissing(Array.from({length:4},(_,i)=>el("page-"+i)), "이 쪽의 동화 내용을 넣어 주세요.")) return;
