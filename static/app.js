@@ -278,7 +278,7 @@ async function refresh() {
     if (reader && reader.source !== "demo") paintReader();
     notifyConnection("");
   } catch {
-    notifyConnection("책방에 연결할 수 없어요. ‘수업 시작’ 창이 열려 있는지 확인해 주세요. 잠시 뒤 다시 연결합니다.");
+    notifyConnection("책방을 열 수 없어요. 인터넷 연결과 브라우저 저장 공간을 확인해 주세요. 잠시 뒤 다시 시도합니다.");
   } finally { polling = false; }
 }
 function firstMissing(nodes, message) {
@@ -546,7 +546,7 @@ el("reload-group").addEventListener("click",async () => {
     const data = state.groups.find(g => g.id === group.data.id);
     groups.set(data.id,createGroup(data));
     if (active === data.id) fillEditor();
-  } catch { group.error = "연결할 수 없어요. 수업 시작 창을 확인해 주세요."; updateEditorState(); }
+  } catch { group.error = "책을 불러올 수 없어요. 브라우저 저장 공간을 확인해 주세요."; updateEditorState(); }
 });
 el("prev-page").addEventListener("click",()=>turn(-1));
 el("next-page").addEventListener("click",()=>turn(1));
