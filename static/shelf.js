@@ -57,11 +57,14 @@ const onlineShelf = (() => {
     if (!book || typeof book.title !== "string" || !book.title.trim() || book.title.length>80 ||
         !Array.isArray(book.pages) || book.pages.length!==4 || !book.pages.every(p=>typeof p==="string" && p.trim() && p.length<=900))
       throw new Error("네 쪽 원고를 받지 못했어요. 다시 시도해 주세요.");
-    return save(id,payload.revision,g=>{g.title=book.title.trim(); g.pages=pages(book.pages,g.pages);});
+    return save(id,payload.revision,g=>{
+      g.title=book.title.trim(); g.pages=pages(book.pages,[]); delete g.characterSheet;
+    });
   }
-  async function drawPage(texts,i) {
-    const prompt = "Paint one full-bleed 4:3 landscape watercolor illustration for a Korean storybook. Consistent characters and clothes across the four scenes. No text, borders or lettering. Keep essential details near center. Story: " + JSON.stringify(texts) + ". Illustrate only scene " + (i+1) + ": " + texts[i];
-    let img = await puter.ai.txt2img(prompt,{ratio:{w:4,h:3}});
+  async function renderImage(prompt,reference) {
+    const options = {model:"gemini-3.1-flash-image",quality:"1K",ratio:{w:4,h:3}};
+    if (reference) options.input_images = [reference];
+    let img = await puter.ai.txt2img(prompt,options);
     if (/^https?:/.test(img.src) && new URL(img.src).origin !== location.origin) {
       const source = img.src;
       img = new Image();
@@ -80,13 +83,25 @@ const onlineShelf = (() => {
     let group = (await getGroups()).find(g=>g.id===id);
     if (group.revision !== payload.revision) throw new Error("원고가 바뀌었어요. 다시 열어 주세요.");
     const missing = group.pages.map((p,i)=>p.image ? null : i).filter(i=>i!==null);
+    if (!missing.length) return group;
+    const texts = group.pages.map(p=>p.text);
+    let sheet = group.characterSheet;
+    if (!sheet?.image || sheet.story !== JSON.stringify(texts)) {
+      const previousPage = group.pages.find(p=>p.image);
+      const reference = previousPage && (sheet?.image || previousPage.image);
+      const prompt = "Create a watercolor character model sheet for this Korean picture book. Read all four pages, identify each actual character (including animals or personified objects). Show each distinct character separately in a neutral full-body pose, with clear faces, silhouettes, relative sizes, markings, clothing and signature colors. Keep key details inside the middle 80% on a plain background. No labels or lettering. For a story without characters show the recurring visual subjects. Retain established character designs from the attached reference if provided, incorporating explicit changes in the manuscript. Story material: " + JSON.stringify({title:group.title,pages:texts});
+      sheet = {story:JSON.stringify(texts),image:await renderImage(prompt,reference)};
+      group = await save(id,group.revision,g=>{g.characterSheet=sheet;});
+      onProgress?.(group);
+    }
     let writes = Promise.resolve();
     let failure;
     async function worker() {
       while (missing.length && !failure) {
         const i = missing.shift();
         try {
-          const url = await drawPage(payload.pages,i);
+          const prompt = "Paint one full-bleed 4:3 landscape watercolor illustration for a Korean storybook. Use the attached character model sheet as the visual identity reference: match faces, proportions, markings and outfits, except for explicit story changes. Show only characters present in this scene, in new natural poses and a real setting. No lineup, borders or lettering. Keep essential details near center. Story: " + JSON.stringify(texts) + ". Illustrate only scene " + (i+1) + ": " + texts[i];
+          const url = await renderImage(prompt,sheet.image);
           // Commit in completion order so both workers use the latest saved revision.
           writes = writes.then(async () => {
             group = await save(id,group.revision,g=>{g.pages[i].image=url;});

@@ -151,7 +151,9 @@ function updateEditorState() {
     if (job.status === "error") msg += job.type === "story" ? " 이야기 재료에서 ‘AI로 동화 쓰기’를 다시 누를 수 있어요." : " 원고에서 ‘삽화 만들기’를 다시 누르거나 글부터 읽어 보세요.";
   } else if (group.pending === "art") {
     const ready = group.data.pages.filter(p=>p.image).length;
-    msg = "삽화 " + ready + " / 4장 완성 · 책을 펼치면 완성된 그림부터 볼 수 있어요.";
+    msg = group.data.characterSheet?.story === JSON.stringify(group.draft.pages.map(p=>p.trim()))
+      ? "삽화 " + ready + " / 4장 완성 · 책을 펼치면 완성된 그림부터 볼 수 있어요."
+      : "네 쪽의 원고를 읽고 등장인물의 모습을 담은 캐릭터시트를 그리고 있어요.";
   } else if (locked) msg = "AI가 작업 중이에요. 이 탭을 열어 두세요.";
   if (el("jobs").textContent !== msg) el("jobs").textContent = msg;
   show(el("jobs"),Boolean(msg));
