@@ -65,7 +65,13 @@ const onlineShelf = (() => {
     for (let i=0;i<group.pages.length;i++) {
       if (group.pages[i].image) continue;
       const prompt = "Paint one full-bleed 4:3 landscape watercolor illustration for a Korean storybook. Consistent characters and clothes across the four scenes. No text, borders or lettering. Keep essential details near center. Story: " + JSON.stringify(payload.pages) + ". Illustrate only scene " + (i+1) + ": " + group.pages[i].text;
-      const img = await puter.ai.txt2img(prompt,{ratio:{w:4,h:3}});
+      let img = await puter.ai.txt2img(prompt,{ratio:{w:4,h:3}});
+      if (/^https?:/.test(img.src) && new URL(img.src).origin !== location.origin) {
+        const source = img.src;
+        img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = source;
+      }
       await img.decode();
       const canvas = document.createElement("canvas");
       canvas.width=1440; canvas.height=1080;
