@@ -48,7 +48,10 @@ const onlineShelf = (() => {
     });
   }
   async function writeBook(id,payload) {
-    const prompt = "고른 단어가 있으면 모두 담고, 이야기 재료가 비어 있으면 일상의 소재를 자유롭게 상상해 자유로운 한국어 그림동화를 창작해 주세요. 모둠이 준 아이디어와 대사를 살리고, 기·승·전·결 네 장면으로 구성하세요. 한 쪽에 짧고 낭독하기 쉬운 두 문장씩 쓰세요. JSON 객체 하나만 반환하세요. title은 80자 이하 제목, pages는 한국어 문자열 네 개의 배열입니다. 이야기 재료 " + JSON.stringify({words:payload.words,idea:payload.idea});
+    const prompt = "어르신 모둠이 함께 낭독할 한국어 그림동화를 써 주세요. 고른 단어가 있으면 모두 담고 모둠의 장면과 대사를 살리세요. 재료가 없으면 일상의 소재를 자유롭게 상상하세요. " +
+      "어른끼리 이야기를 들려주듯 편안한 해요체로 쓰세요. 아기 말투는 피하세요. 한 쪽에 눈에 그려지는 행동 하나를 짧은 1~2문장으로 쓰세요. 한 문장은 한 호흡(보통 5~10어절)으로 읽게 하세요. " +
+      "평소 대화에서 쓰는 말과 구체적인 동사를 고르세요. 예를 들어 ‘기쁨이 번졌어요’보다 ‘둘은 마주 보고 웃었어요’처럼 쓰세요. 같은 주인공을 따라 일이 일어난 차례로 들려주세요. 누가 무엇을 했는지 분명히 하고 마지막은 사건이 어떻게 끝났는지 보여 주세요. " +
+      "JSON 객체 하나만 반환하세요. title은 18자 이내 제목, pages는 기·승·전·결 순서의 한국어 문자열 네 개입니다. 이야기 재료 " + JSON.stringify({words:payload.words,idea:payload.idea});
     const reply = await puter.ai.chat(prompt,{model:"gemini-3.1-flash-lite",reasoning_effort:"minimal",max_tokens:1200});
     const content = reply.message?.content;
     const raw = Array.isArray(content) ? content.map(p=>p.text || "").join("") : String(content || reply);
