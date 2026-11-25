@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#244b41">
+  <title>우리 모둠 동화책방</title>
+  <link rel="stylesheet" href="./static/style.css?v=fold2">
+  <script src="./static/shelf.js" defer></script>
+  <script src="./static/app.js?v=fold2" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+  <header class="masthead">
+    <div class="frame bar">
+      <button id="brand" class="brand" type="button" aria-label="우리 모둠 동화책방 첫 화면">
+        <span class="bookmark-icon" aria-hidden="true"><i></i><i></i></span> 우리 모둠 동화책방
+      </button>
+      <span class="mast-note" id="mast-note">마천데이케어센터 그림동화 교실</span>
+      <button id="home-btn" class="plain" type="button" hidden>모둠 책상으로</button>
+    </div>
+  </header>
+  <main id="main" class="frame">
+    <p id="connection" class="notice" role="status" hidden></p>
+    <section id="home">
+      <div class="showcase">
+        <div class="showcase-copy">
+          <h1>우리 모둠<br> 그림동화</h1>
+          <p>함께 나눈 이야기를<br> 네 쪽의 그림책으로 엮어요.</p>
+          <button id="demo-btn" class="button light" type="button" disabled><span class="open-icon" aria-hidden="true">▤</span> 예시 책 보기</button>
+        </div>
+        <div class="showcase-art" aria-hidden="true"><img id="cover-img" src="./static/demo-1.jpg?book=whale-page-4x3" alt=""></div>
+      </div>
+      <section class="desks" aria-labelledby="desk-title">
+        <div class="section-line"><h2 id="desk-title">모둠 책상</h2><p>함께 작업할 모둠을 골라 주세요.</p></div>
+        <div id="desk-list" class="desk-list" aria-live="off"></div>
+      </section>
+    </section>
+    <section id="editor" hidden>
+      <div class="editor-top">
+        <div><p class="context">모둠 책상</p><h1 id="group-title" tabindex="-1"></h1></div>
+        <label class="switch-label">모둠 바꾸기
+          <select id="group-select" aria-label="모둠 바꾸기"><option value="1">1모둠</option><option value="2">2모둠</option><option value="3">3모둠</option></select>
+        </label>
+      </div>
+      <div class="editor-tabs" role="group" aria-label="작업 단계">
+        <button id="ideas-tab" type="button" class="step-tab" aria-pressed="true">이야기 재료</button>
+        <button id="story-tab" type="button" class="step-tab" aria-pressed="false">동화 원고</button>
+      </div>
+      <div class="status-line"><span id="save-state" aria-live="polite"></span><button id="retry-save" type="button" class="text-button" hidden>다시 저장</button><button id="reload-group" type="button" class="text-button" hidden>저장된 내용 불러오기</button></div>
+      <div class="status-line"><button type="button" class="button outline" id="connect-ai">AI 연결하기</button><span id="ai-info" role="status">동화와 삽화 생성에는 Puter 로그인이 필요해요. 선택한 단어와 원고가 전송되며 계정의 이용 한도와 요금이 적용돼요.</span></div>
+      <div id="jobs" class="notice" role="status" hidden></div>
+      <section id="ideas-panel" class="editor-panel">
+        <div class="panel-heading word-heading">
+          <h2 id="word-heading">우리 모둠의 단어 다섯 개</h2>
+          <p id="word-help">단어 30개 중 마음에 드는 다섯 개를 고르세요. 고른 단어를 다시 누르면 선택이 풀려요.</p>
+        </div>
+        <div class="word-summary" role="status" aria-live="polite" aria-atomic="true">
+          <strong id="word-count">0 / 5개 선택</strong><span id="selected-words"></span>
+        </div>
+        <div id="word-board" class="word-board" role="group" aria-labelledby="word-heading" aria-describedby="word-help"></div>
+        <div class="idea-box">
+          <label for="group-idea">우리 모둠 이야기 <span>(선택)</span></label>
+          <p id="idea-help">고른 단어로 함께 지은 이야기나 꼭 넣고 싶은 한마디를 들려주세요.</p>
+          <textarea id="group-idea" rows="3" maxlength="1000" aria-describedby="idea-help"></textarea>
+        </div>
+        <div class="actions"><button id="write-btn" type="button" class="button primary">AI로 동화 쓰기</button><button id="to-story" type="button" class="button outline">원고 직접 넣기</button></div>
+      </section>
+      <section id="story-panel" class="editor-panel" hidden>
+        <div class="panel-heading"><h2>네 쪽의 동화 원고</h2><p>한 쪽씩 소리 내어 읽고 우리 말에 맞게 고쳐 주세요.</p></div>
+        <label class="title-field">책 제목<input id="book-title" autocomplete="off" maxlength="80"></label>
+        <details id="paste-box">
+          <summary>네 문단 한꺼번에 붙여넣기</summary>
+          <div class="paste-content">
+            <label for="paste-input">완성된 동화 내용</label>
+            <p id="paste-help">원고를 통째로 넣으면 문장 끝에서 네 쪽으로 나눠요. 직접 나누려면 네 장면 사이에 빈 줄을 하나씩 넣어 주세요.</p>
+            <textarea id="paste-input" rows="6" aria-describedby="paste-help paste-info"></textarea>
+            <button id="paste-btn" class="button outline" type="button">네 쪽에 나누어 담기</button><p id="paste-info" role="status"></p>
+          </div>
+        </details>
+        <p id="paste-result" class="paste-result" role="status" tabindex="-1" hidden></p>
+        <div id="page-inputs"></div>
+        <div class="actions"><button id="art-btn" type="button" class="button primary">삽화 만들기</button><button id="read-btn" type="button" class="button outline">책 펼치기</button></div>
+      </section>
+    </section>
+  </main>
+  <section id="reader" hidden aria-label="동화책 읽기">
+    <div class="reading-bar"><div class="reading-info"><span id="reader-owner"></span><h1 id="reader-title"></h1></div>
+      <div class="reader-tools"><button id="fullscreen" class="reader-tool" type="button">전체 화면</button><button id="close-reader" class="reader-tool" type="button">책 덮기</button></div>
+    </div>
+    <div id="spread-frame"><article id="spread" class="spread">
+      <div id="art-leaf" class="art-leaf"><img id="reader-image" alt=""><p id="art-message" class="art-message">아직 삽화가 없어요.</p></div>
+      <div class="text-leaf">
+        <div id="front-cover" hidden><h2 id="cover-title"></h2><p id="cover-author"></p></div>
+        <div id="story-leaf" class="leaf-inner"><p id="reader-stage" class="reader-stage"></p><p id="reader-text" tabindex="0" role="region" aria-labelledby="reader-stage"></p></div>
+        <span id="folio" aria-hidden="true"></span>
+      </div>
+    </article></div>
+    <nav class="turn-bar" aria-label="책장 넘기기">
+      <button class="turn-btn" id="prev-page" type="button"><span aria-hidden="true">‹</span> 이전 쪽</button>
+      <span id="page-count" aria-live="polite"></span>
+      <button class="turn-btn" id="next-page" type="button">다음 쪽 <span aria-hidden="true">›</span></button>
+    </nav>
+  </section>
+</body>
+</html>
